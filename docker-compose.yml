@@ -1,7 +1,8 @@
+version: '3.8'
+
 services:
   xsshunterexpress-db:
     image: postgres
-    container_name: xsshunterexpress-db
     restart: unless-stopped
     env_file:
       - .env
@@ -9,36 +10,37 @@ services:
       PGDATA: /var/lib/postgresql/data/pgdata
       POSTGRES_HOST_AUTH_METHOD: trust
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
       interval: 3s
       timeout: 5s
       retries: 5
     volumes:
       - ./postgres-db-data:/var/lib/postgresql/data/pgdata
+
   xsshunterexpress-service:
     build: .
-    container_name: xsshunterexpress-service
     restart: unless-stopped
     env_file:
       - .env
     ports:
-      - 127.0.0.1:8080:8080
+      - 8080:8080
     volumes:
       - ./payload-fire-images:/app/payload-fire-images
-      - ~/.config/gcloud/application_default_credentials.json:/gcloud.json
+      # If you need Google Cloud credentials, consider using secrets or a mounted file within the project directory
+      # - ./gcloud-credentials.json:/gcloud.json
     depends_on:
       xsshunterexpress-db:
         condition: service_healthy
+
   xsshunterexpress-trufflehog:
     build:
       dockerfile: Dockerfile.trufflehog
-    container_name: xsshunterexpress-trufflehog
     restart: unless-stopped
     ports:
-      - 127.0.0.1:8000:8000
+      - 8000:8000
+
   xsshunterexpress-proxy:
     image: caddy:alpine
-    container_name: xsshunterexpress-proxy
     restart: unless-stopped
     env_file:
       - .env
